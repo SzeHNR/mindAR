@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebAR - Gardaland</title>
+    <title>Gardaland WebAR</title>
     <!-- A-Frame és MindAR könyvtárak -->
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
@@ -11,13 +11,34 @@
         body {
             margin: 0;
             overflow: hidden;
+            background: #111;
+            font-family: Arial, sans-serif;
+        }
+
+        #status {
+            position: fixed;
+            z-index: 10;
+            top: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: min(90vw, 420px);
+            padding: 12px 16px;
+            box-sizing: border-box;
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.72);
+            color: #fff;
+            font-size: 14px;
+            line-height: 1.4;
+            text-align: center;
         }
     </style>
 </head>
 <body>
 
+    <div id="status">Kamera indítása...</div>
+
     <a-scene id="ar-scene" 
-             mindar-image="imageTargetSrc: target.mind;" 
+             mindar-image="imageTargetSrc: img/target.mind; autoStart: true; uiLoading: no; uiScanning: no;" 
              color-space="sRGB" 
              renderer="colorManagement: true, physicallyCorrectLights" 
              vr-mode-ui="enabled: false" 
@@ -37,13 +58,23 @@
                 id: "gardaland",
                 video: "img/gardaland.mp4",
                 width: 1,
-                height: 2
+                height: 1.78
             }
         ];
 
         document.addEventListener("DOMContentLoaded", function() {
             const assetsContainer = document.querySelector("#assets-container");
             const targetsContainer = document.querySelector("#targets-container");
+            const status = document.querySelector("#status");
+            const scene = document.querySelector("#ar-scene");
+
+            scene.addEventListener("arReady", () => {
+                status.textContent = "Irányítsd a kamerát a Gardaland képre.";
+            });
+
+            scene.addEventListener("arError", () => {
+                status.textContent = "Nem sikerült elindítani a kamerát. Ellenőrizd a böngésző engedélyeit.";
+            });
 
             arConfig.forEach((item, index) => {
                 // 1. Videó elem létrehozása
@@ -77,12 +108,16 @@
                 // 4. Eseménykezelők a lejátszáshoz
                 targetEntity.addEventListener("targetFound", () => {
                     console.log(`Célpont megtalálva: ${item.id}`);
-                    videoEl.play();
+                    status.textContent = "Kép felismerve, a videó lejátszása elindult.";
+                    videoEl.play().catch(() => {
+                        status.textContent = "Érintsd meg a képernyőt a videó elindításához.";
+                    });
                 });
 
                 targetEntity.addEventListener("targetLost", () => {
                     console.log(`Célpont elveszítve: ${item.id}`);
                     videoEl.pause();
+                    status.textContent = "Irányítsd vissza a kamerát a Gardaland képre.";
                 });
             });
         });
