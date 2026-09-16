@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebAR - Gardaland</title>
+    <!-- A-Frame és MindAR könyvtárak -->
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body>
+
+    <a-scene id="ar-scene" 
+             mindar-image="imageTargetSrc: target.mind;" 
+             color-space="sRGB" 
+             renderer="colorManagement: true, physicallyCorrectLights" 
+             vr-mode-ui="enabled: false" 
+             device-orientation-permission-ui="enabled: false">
+        
+        <a-assets id="assets-container"></a-assets>
+        <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+        <a-entity id="targets-container"></a-entity>
+        
+    </a-scene>
+
+    <script>
+        // Kép-videó párosok konfigurációja
+        // A tömb sorrendje pontosan kövesse a MindAR compilerben lévő képek sorrendjét!
+        const arConfig = [
+            {
+                id: "gardaland",
+                video: "img/gardaland.mp4",
+                width: 1,
+                height: 2
+            }
+        ];
+
+        document.addEventListener("DOMContentLoaded", function() {
+            const assetsContainer = document.querySelector("#assets-container");
+            const targetsContainer = document.querySelector("#targets-container");
+
+            arConfig.forEach((item, index) => {
+                // 1. Videó elem létrehozása
+                const videoEl = document.createElement("video");
+                videoEl.setAttribute("id", `video-${item.id}`);
+                videoEl.setAttribute("src", item.video);
+                videoEl.setAttribute("preload", "auto");
+                videoEl.setAttribute("crossorigin", "anonymous");
+                videoEl.setAttribute("webkit-playsinline", "");
+                videoEl.setAttribute("playsinline", "");
+                videoEl.muted = true;
+                videoEl.loop = true;
+
+                assetsContainer.appendChild(videoEl);
+
+                // 2. AR Célpont létrehozása (0-s indexű target a target.mind fájlban)
+                const targetEntity = document.createElement("a-entity");
+                targetEntity.setAttribute("mindar-image-target", `targetIndex: ${index}`);
+
+                // 3. Videó sík létrehozása
+                const videoPlane = document.createElement("a-video");
+                videoPlane.setAttribute("src", `#video-${item.id}`);
+                videoPlane.setAttribute("position", "0 0 0");
+                videoPlane.setAttribute("width", item.width);
+                videoPlane.setAttribute("height", item.height);
+                videoPlane.setAttribute("rotation", "0 0 0");
+
+                targetEntity.appendChild(videoPlane);
+                targetsContainer.appendChild(targetEntity);
+
+                // 4. Eseménykezelők a lejátszáshoz
+                targetEntity.addEventListener("targetFound", () => {
+                    console.log(`Célpont megtalálva: ${item.id}`);
+                    videoEl.play();
+                });
+
+                targetEntity.addEventListener("targetLost", () => {
+                    console.log(`Célpont elveszítve: ${item.id}`);
+                    videoEl.pause();
+                });
+            });
+        });
+    </script>
+
+</body>
+</html>
