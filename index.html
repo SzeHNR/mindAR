@@ -51,16 +51,45 @@
     </a-scene>
 
     <script>
-        // Kép-videó párosok konfigurációja
-        // A tömb sorrendje pontosan kövesse a MindAR compilerben lévő képek sorrendjét!
-        const arConfig = [
-            {
-                id: "gardaland",
-                video: "img/gardaland.mp4",
+        // A tömb pontosan követi a fájlrendszerek és a MindAR compiler kis/nagybetűt nem megkülönböztető ábécésorrendjét.
+        const targetNames = [
+            "autismo",
+            "bluetornado",
+            "gardaland",
+            "genova1",
+            "giustigarden",
+            "giustigarden2",
+            "kilato",
+            "lecco",
+            "lenno",
+            "lenno2",
+            "lennohajo1",
+            "lennohajo2",
+            "lennohajo3",
+            "lennohajo4",
+            "MJ",
+            "oblivion",
+            "portofino",
+            "portofinohazamenet",
+            "portofinostrand",
+            "portofinovonat",
+            "raptor",
+            "setavonat",
+            "sirmione",
+            "sirmionepart",
+            "tuzijatek",
+            "veronanaplemente"
+        ];
+
+        const arConfig = targetNames.map((name) => {
+            const cleanName = name.trim();
+            return {
+                id: cleanName,
+                video: `img/${cleanName}.mp4`,
                 width: 1,
                 height: 1.78
-            }
-        ];
+            };
+        });
 
         document.addEventListener("DOMContentLoaded", function() {
             const assetsContainer = document.querySelector("#assets-container");
@@ -69,7 +98,7 @@
             const scene = document.querySelector("#ar-scene");
 
             scene.addEventListener("arReady", () => {
-                status.textContent = "Irányítsd a kamerát a megjelölt képekre (⏸️▶️) képre.";
+                status.textContent = "Irányítsd a kamerát valamelyik képre.";
             });
 
             scene.addEventListener("arError", () => {
@@ -90,7 +119,7 @@
 
                 assetsContainer.appendChild(videoEl);
 
-                // 2. AR Célpont létrehozása (0-s indexű target a target.mind fájlban)
+                // 2. AR Célpont létrehozása
                 const targetEntity = document.createElement("a-entity");
                 targetEntity.setAttribute("mindar-image-target", `targetIndex: ${index}`);
 
@@ -108,7 +137,7 @@
                 // 4. Eseménykezelők a lejátszáshoz
                 targetEntity.addEventListener("targetFound", () => {
                     console.log(`Célpont megtalálva: ${item.id}`);
-                    status.textContent = "Kép felismerve, a videó lejátszása elindult.";
+                    status.textContent = `${item.id} felismerve, a videó lejátszása elindult.`;
                     videoEl.play().catch(() => {
                         status.textContent = "Érintsd meg a képernyőt a videó elindításához.";
                     });
@@ -117,7 +146,7 @@
                 targetEntity.addEventListener("targetLost", () => {
                     console.log(`Célpont elveszítve: ${item.id}`);
                     videoEl.pause();
-                    status.textContent = "Irányítsd vissza a kamerát a Gardaland képre.";
+                    status.textContent = "Irányítsd vissza a kamerát valamelyik képre.";
                 });
             });
         });
