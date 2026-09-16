@@ -114,7 +114,7 @@
                 videoEl.setAttribute("crossorigin", "anonymous");
                 videoEl.setAttribute("webkit-playsinline", "");
                 videoEl.setAttribute("playsinline", "");
-                videoEl.muted = true;
+                videoEl.muted = false;
                 videoEl.loop = true;
 
                 assetsContainer.appendChild(videoEl);
@@ -127,8 +127,8 @@
                 const videoPlane = document.createElement("a-video");
                 videoPlane.setAttribute("src", `#video-${item.id}`);
                 videoPlane.setAttribute("position", "0 0 0");
-                videoPlane.setAttribute("width", item.width);
-                videoPlane.setAttribute("height", item.height);
+                videoPlane.setAttribute("width", 1);
+                videoPlane.setAttribute("height", aspectRatio);
                 videoPlane.setAttribute("rotation", "0 0 0");
 
                 targetEntity.appendChild(videoPlane);
