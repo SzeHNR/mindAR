@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WebAR</title>
-    <!-- A-Frame és MindAR könyvtárak -->
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     <style>
@@ -35,7 +34,7 @@
 </head>
 <body>
 
-    <div id="status">Kamera indítása...</div>
+    <div id="status">Koppints a képernyőre a hang engedélyezéséhez!</div>
 
     <a-scene id="ar-scene" 
              mindar-image="imageTargetSrc: img/target.mind; autoStart: true; uiLoading: no; uiScanning: no;" 
@@ -51,104 +50,112 @@
     </a-scene>
 
     <script>
-        // A tömb pontosan követi a fájlrendszerek és a MindAR compiler kis/nagybetűt nem megkülönböztető ábécésorrendjét.
         const targetNames = [
-            "autismo",
-            "bluetornado",
-            "gardaland",
-            "genova1",
-            "giustigarden",
-            "giustigarden2",
-            "kilato",
-            "lecco",
-            "lenno",
-            "lenno2",
-            "lennohajo1",
-            "lennohajo2",
-            "lennohajo3",
-            "lennohajo4",
-            "MJ",
-            "oblivion",
-            "portofino",
-            "portofinohazamenet",
-            "portofinostrand",
-            "portofinovonat",
-            "raptor",
-            "setavonat",
-            "sirmione",
-            "sirmionepart",
-            "tuzijatek",
-            "veronanaplemente"
+            "autismo", "bluetornado", "gardaland", "genova1", "giustigarden",
+            "giustigarden2", "kilato", "lecco", "lenno", "lenno2",
+            "lennohajo1", "lennohajo2", "lennohajo3", "lennohajo4", "MJ",
+            "oblivion", "portofino", "portofinohazamenet", "portofinostrand",
+            "portofinovonat", "raptor", "setavonat", "sirmione", "sirmionepart",
+            "tuzijatek", "veronanaplemente"
         ];
 
-        const arConfig = targetNames.map((name) => {
+        const assetsContainer = document.querySelector("#assets-container");
+        const targetsContainer = document.querySelector("#targets-container");
+        const status = document.querySelector("#status");
+        const scene = document.querySelector("#ar-scene");
+
+        let activeVideo = null;
+        let soundAllowed = false;
+
+        // Hang engedélyezése az első érintésre (mobil böngésző szabály)
+        const enableAudio = () => {
+            soundAllowed = true;
+            status.textContent = "Kamera kész. Irányítsd egy képre!";
+            if (activeVideo) {
+                activeVideo.muted = false;
+                activeVideo.play().catch(() => {});
+            }
+            window.removeEventListener("click", enableAudio);
+            window.removeEventListener("touchstart", enableAudio);
+        };
+        window.addEventListener("click", enableAudio);
+        window.addEventListener("touchstart", enableAudio);
+
+        targetNames.forEach((name, index) => {
             const cleanName = name.trim();
-            return {
-                id: cleanName,
-                video: `img/${cleanName}.mp4`,
-                width: 1,
-                height: 1.78
-            };
+            
+            // 1. Videó elem létrehozása (preload="metadata" a memória kíméléséért)
+            const videoEl = document.createElement("video");
+            videoEl.setAttribute("id", `video-${cleanName}`);
+            videoEl.setAttribute("src", `img/${cleanName}.mp4`);
+            videoEl.setAttribute("preload", "metadata");
+            videoEl.setAttribute("crossorigin", "anonymous");
+            videoEl.setAttribute("webkit-playsinline", "");
+            videoEl.setAttribute("playsinline", "");
+            videoEl.muted = true; // Kezdetben némítva az autoplay hiba elkerülésére
+            videoEl.loop = true;
+
+            assetsContainer.appendChild(videoEl);
+
+            // 2. AR Célpont létrehozása
+            const targetEntity = document.createElement("a-entity");
+            targetEntity.setAttribute("mindar-image-target", `targetIndex: ${index}`);
+
+            // 3. Videó sík létrehozása (alapértelmezett 1x1.78 mérettel)
+            const videoPlane = document.createElement("a-video");
+            videoPlane.setAttribute("src", `#video-${cleanName}`);
+            videoPlane.setAttribute("position", "0 0 0");
+            videoPlane.setAttribute("width", "1");
+            videoPlane.setAttribute("height", "1.78");
+            videoPlane.setAttribute("rotation", "0 0 0");
+
+            // Automatikus méretre igazítás, amint a videó metaadatai betöltődnek
+            videoEl.addEventListener("loadedmetadata", () => {
+                if (videoEl.videoWidth && videoEl.videoHeight) {
+                    const calculatedRatio = videoEl.videoHeight / videoEl.videoWidth;
+                    videoPlane.setAttribute("height", calculatedRatio);
+                }
+            });
+
+            targetEntity.appendChild(videoPlane);
+            targetsContainer.appendChild(targetEntity);
+
+            // 4. Eseménykezelők a lejátszáshoz
+            targetEntity.addEventListener("targetFound", () => {
+                console.log(`Célpont megtalálva: ${cleanName}`);
+                status.textContent = `${cleanName} felismerve!`;
+
+                if (activeVideo && activeVideo !== videoEl) {
+                    activeVideo.pause();
+                    activeVideo.currentTime = 0;
+                }
+
+                activeVideo = videoEl;
+
+                if (soundAllowed) {
+                    videoEl.muted = false;
+                }
+
+                videoEl.play().catch(() => {
+                    status.textContent = "Érintsd meg a képernyőt a lejátszáshoz.";
+                });
+            });
+
+            targetEntity.addEventListener("targetLost", () => {
+                console.log(`Célpont elveszítve: ${cleanName}`);
+                videoEl.pause();
+                status.textContent = "Keresem a képet...";
+            });
         });
 
-        document.addEventListener("DOMContentLoaded", function() {
-            const assetsContainer = document.querySelector("#assets-container");
-            const targetsContainer = document.querySelector("#targets-container");
-            const status = document.querySelector("#status");
-            const scene = document.querySelector("#ar-scene");
+        scene.addEventListener("arReady", () => {
+            if (!soundAllowed) {
+                status.textContent = "Koppints a képernyőre a hang engedélyezéséhez!";
+            }
+        });
 
-            scene.addEventListener("arReady", () => {
-                status.textContent = "Irányítsd a kamerát valamelyik képre.";
-            });
-
-            scene.addEventListener("arError", () => {
-                status.textContent = "Nem sikerült elindítani a kamerát. Ellenőrizd a böngésző engedélyeit.";
-            });
-
-            arConfig.forEach((item, index) => {
-                // 1. Videó elem létrehozása
-                const videoEl = document.createElement("video");
-                videoEl.setAttribute("id", `video-${item.id}`);
-                videoEl.setAttribute("src", item.video);
-                videoEl.setAttribute("preload", "auto");
-                videoEl.setAttribute("crossorigin", "anonymous");
-                videoEl.setAttribute("webkit-playsinline", "");
-                videoEl.setAttribute("playsinline", "");
-                videoEl.muted = false;
-                videoEl.loop = true;
-
-                assetsContainer.appendChild(videoEl);
-
-                // 2. AR Célpont létrehozása
-                const targetEntity = document.createElement("a-entity");
-                targetEntity.setAttribute("mindar-image-target", `targetIndex: ${index}`);
-
-                // 3. Videó sík létrehozása
-                const videoPlane = document.createElement("a-video");
-                videoPlane.setAttribute("src", `#video-${item.id}`);
-                videoPlane.setAttribute("position", "0 0 0");
-                videoPlane.setAttribute("width", 1);
-                videoPlane.setAttribute("height", aspectRatio);
-                videoPlane.setAttribute("rotation", "0 0 0");
-
-                targetEntity.appendChild(videoPlane);
-                targetsContainer.appendChild(targetEntity);
-
-                // 4. Eseménykezelők a lejátszáshoz
-                targetEntity.addEventListener("targetFound", () => {
-                    console.log(`Célpont megtalálva: ${item.id}`);
-                    status.textContent = `${item.id} felismerve, a videó lejátszása elindult.`;
-                    videoEl.play().catch(() => {
-                        status.textContent = "Érintsd meg a képernyőt a videó elindításához.";
-                    });
-                });
-
-                targetEntity.addEventListener("targetLost", () => {
-                    console.log(`Célpont elveszítve: ${item.id}`);
-                    videoEl.pause();
-                    status.textContent = "Irányítsd vissza a kamerát valamelyik képre.";
-                });
-            });
+        scene.addEventListener("arError", () => {
+            status.textContent = "Nem sikerült elindítani a kamerát. Ellenőrizd a jogosultságokat.";
         });
     </script>
 
