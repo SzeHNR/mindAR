@@ -1,198 +1,246 @@
 <!doctype html>
 <html lang="hu">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WebAR</title>
+    <!-- A-Frame és MindAR könyvtárak -->
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+    <style>
+      body {
+        margin: 0;
+        overflow: hidden;
+        background: #111;
+        font-family: Arial, sans-serif;
+      }
 
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>WebAR</title>
-  <!-- A-Frame és MindAR könyvtárak -->
-  <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
-  <style>
-    body {
-      margin: 0;
-      overflow: hidden;
-      background: #111;
-      font-family: Arial, sans-serif;
-    }
+      #status {
+        position: fixed;
+        z-index: 10;
+        top: 16px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: min(90vw, 420px);
+        padding: 12px 16px;
+        box-sizing: border-box;
+        border-radius: 8px;
+        background: rgba(0, 0, 0, 0.72);
+        color: #fff;
+        font-size: 14px;
+        line-height: 1.4;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="status">Kamera indítása...</div>
 
-    #status {
-      position: fixed;
-      z-index: 10;
-      top: 16px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: min(90vw, 420px);
-      padding: 12px 16px;
-      box-sizing: border-box;
-      border-radius: 8px;
-      background: rgba(0, 0, 0, 0.72);
-      color: #fff;
-      font-size: 14px;
-      line-height: 1.4;
-      text-align: center;
-    }
-  </style>
-</head>
+    <a-scene
+      id="ar-scene"
+      mindar-image="imageTargetSrc: img/target.mind; autoStart: true; uiLoading: no; uiScanning: no; filterMinCF: 0.0001; filterBeta: 0.001;"
+      color-space="sRGB"
+      renderer="colorManagement: true; antialias: false; precision: mediump;"
+      vr-mode-ui="enabled: false"
+      device-orientation-permission-ui="enabled: false"
+    >
+      <a-assets id="assets-container"></a-assets>
+      <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+      <a-entity id="targets-container"></a-entity>
+    </a-scene>
 
-<body>
-  <div id="status">Kamera indítása...</div>
+    <script>
+      const targetNames = [
+        "autismo",
+        "bluetornado",
+        "gardaland",
+        "genova1",
+        "giustigarden",
+        "giustigarden2",
+        "kilato",
+        "lecco",
+        "lenno",
+        "lenno2",
+        "lennohajo1",
+        "lennohajo2",
+        "lennohajo3",
+        "lennohajo4",
+        "MJ",
+        "oblivion",
+        "portofino",
+        "portofinohazamenet",
+        "portofinostrand",
+        "portofinovonat",
+        "raptor",
+        "setavonat",
+        "sirmione",
+        "sirmionepart",
+        "tuzijatek",
+        "veronanaplemente",
+      ];
 
-  <a-scene id="ar-scene"
-    mindar-image="imageTargetSrc: img/target.mind; autoStart: true; uiLoading: no; uiScanning: no; filterMinCF: 0.0001; filterBeta: 0.001;"
-    color-space="sRGB" renderer="colorManagement: true; antialias: false; precision: mediump;"
-    vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
-    <a-assets id="assets-container"></a-assets>
-    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-    <a-entity id="targets-container"></a-entity>
-  </a-scene>
-
-  <script>
-    const targetNames = [
-      "autismo",
-      "bluetornado",
-      "gardaland",
-      "genova1",
-      "giustigarden",
-      "giustigarden2",
-      "kilato",
-      "lecco",
-      "lenno",
-      "lenno2",
-      "lennohajo1",
-      "lennohajo2",
-      "lennohajo3",
-      "lennohajo4",
-      "MJ",
-      "oblivion",
-      "portofino",
-      "portofinohazamenet",
-      "portofinostrand",
-      "portofinovonat",
-      "raptor",
-      "setavonat",
-      "sirmione",
-      "sirmionepart",
-      "tuzijatek",
-      "veronanaplemente",
-    ];
-
-    const arConfig = targetNames.map((name) => {
-      const cleanName = name.trim();
-      return {
-        id: cleanName,
-        video:
-          ["lenno", "MJ", "setavonat", "sirmione"].includes(cleanName)
+      const arConfig = targetNames.map((name) => {
+        const cleanName = name.trim();
+        return {
+          id: cleanName,
+          video: ["lenno", "MJ", "setavonat", "sirmione"].includes(cleanName)
             ? `img/${cleanName}_h264.mp4`
             : `img/${cleanName}.mp4`,
-        width: 1,
-        height: 1.78,
-      };
-    });
-
-    document.addEventListener("DOMContentLoaded", function () {
-      const assetsContainer = document.querySelector("#assets-container");
-      const targetsContainer = document.querySelector("#targets-container");
-      const status = document.querySelector("#status");
-      const scene = document.querySelector("#ar-scene");
-
-      let activeVideo = null;
-      let soundAllowed = false;
-
-      const enableAudio = () => {
-        soundAllowed = true;
-        if (activeVideo) {
-          activeVideo.muted = false;
-          activeVideo.play().catch(() => { });
-        }
-        window.removeEventListener("click", enableAudio);
-        window.removeEventListener("touchstart", enableAudio);
-      };
-      window.addEventListener("click", enableAudio);
-      window.addEventListener("touchstart", enableAudio);
-
-      scene.addEventListener("arReady", () => {
-        status.textContent = "Irányítsd a kamerát valamelyik képre.";
+          width: 1,
+          height: 1.78,
+        };
       });
 
-      scene.addEventListener("arError", () => {
-        status.textContent =
-          "Nem sikerült elindítani a kamerát. Ellenőrizd a böngésző engedélyeit.";
-      });
+      document.addEventListener("DOMContentLoaded", function () {
+        const assetsContainer = document.querySelector("#assets-container");
+        const targetsContainer = document.querySelector("#targets-container");
+        const status = document.querySelector("#status");
+        const scene = document.querySelector("#ar-scene");
 
-      arConfig.forEach((item, index) => {
-        const videoEl = document.createElement("video");
-        videoEl.setAttribute("id", `video-${item.id}`);
-        videoEl.setAttribute("src", item.video);
-        videoEl.setAttribute("preload", "auto");
-        videoEl.setAttribute("crossorigin", "anonymous");
-        videoEl.setAttribute("webkit-playsinline", "");
-        videoEl.setAttribute("playsinline", "");
-        videoEl.playInline = true;
-        videoEl.muted = true;
-        videoEl.loop = true;
+        let activeVideo = null;
+        let soundAllowed = false;
 
-        assetsContainer.appendChild(videoEl);
-
-        const targetEntity = document.createElement("a-entity");
-        targetEntity.setAttribute(
-          "mindar-image-target",
-          `targetIndex: ${index}`,
-        );
-
-        // Videó sík létrehozása (alapból rejtve: visible="false")
-        const videoPlane = document.createElement("a-video");
-        videoPlane.setAttribute("src", `#video-${item.id}`);
-        videoPlane.setAttribute("position", "0 0 0");
-        videoPlane.setAttribute("width", item.width);
-        videoPlane.setAttribute("height", item.height);
-        videoPlane.setAttribute("rotation", "0 0 0");
-        videoPlane.setAttribute("visible", "false");
-
-        videoEl.addEventListener("loadedmetadata", () => {
-          if (videoEl.videoWidth && videoEl.videoHeight) {
-            const calculatedRatio = videoEl.videoHeight / videoEl.videoWidth;
-            videoPlane.setAttribute("height", calculatedRatio);
+        const enableAudio = () => {
+          soundAllowed = true;
+          if (activeVideo) {
+            activeVideo.muted = false;
+            activeVideo.play().catch(() => {});
           }
+          window.removeEventListener("click", enableAudio);
+          window.removeEventListener("touchstart", enableAudio);
+        };
+        window.addEventListener("click", enableAudio);
+        window.addEventListener("touchstart", enableAudio);
+
+        scene.addEventListener("arReady", () => {
+          status.textContent = "Irányítsd a kamerát valamelyik képre.";
         });
 
-        targetEntity.appendChild(videoPlane);
-        targetsContainer.appendChild(targetEntity);
+        scene.addEventListener("arError", () => {
+          status.textContent =
+            "Nem sikerült elindítani a kamerát. Ellenőrizd a böngésző engedélyeit.";
+        });
 
-        // Célpont megtalálásakor megjelenítjük és elindítjuk
-        targetEntity.addEventListener("targetFound", () => {
-          console.log(`Célpont megtalálva: ${item.id}`);
-          status.textContent = `${item.id} felismerve, videó betöltése...`;
+        arConfig.forEach((item, index) => {
+          const videoEl = document.createElement("video");
+          videoEl.setAttribute("id", `video-${item.id}`);
+          videoEl.setAttribute("src", item.video);
+          videoEl.setAttribute("preload", "auto");
+          videoEl.setAttribute("crossorigin", "anonymous");
+          videoEl.setAttribute("webkit-playsinline", "");
+          videoEl.setAttribute("playsinline", "");
+          videoEl.playsInline = true;
+          videoEl.muted = true;
+          videoEl.loop = true;
 
-          if (activeVideo && activeVideo !== videoEl) {
-            activeVideo.pause();
-            activeVideo.currentTime = 0;
-          }
+          assetsContainer.appendChild(videoEl);
 
-          activeVideo = videoEl;
-          videoPlane.setAttribute("visible", "true"); // Megjelenítés
+          const targetEntity = document.createElement("a-entity");
+          targetEntity.setAttribute(
+            "mindar-image-target",
+            `targetIndex: ${index}`,
+          );
 
-          if (soundAllowed) {
-            videoEl.muted = false;
-          }
+          // Videó sík létrehozása (alapból rejtve: visible="false")
+          const videoPlane = document.createElement("a-video");
+          videoPlane.setAttribute("src", `#video-${item.id}`);
+          videoPlane.setAttribute("position", "0 0 0");
+          videoPlane.setAttribute("width", item.width);
+          videoPlane.setAttribute("height", item.height);
+          videoPlane.setAttribute("rotation", "0 0 0");
+          videoPlane.setAttribute("visible", "false"); 
 
-          videoEl.play().catch(() => {
+          videoEl.addEventListener("loadedmetadata", () => {
+            if (videoEl.videoWidth && videoEl.videoHeight) {
+              const calculatedRatio = videoEl.videoHeight / videoEl.videoWidth;
+              videoPlane.setAttribute("height", calculatedRatio);
+            }
+          });
+
+          videoEl.addEventListener("error", () => {
+            videoPlane.setAttribute("visible", "false");
+            if (activeVideo === videoEl) {
+              activeVideo = null;
+            }
+            const errorCode = videoEl.error?.code;
+            console.error(`Nem sikerült betölteni a(z) ${item.id} videót.`, {
+              source: item.video,
+              errorCode,
+            });
             status.textContent =
-              "Érintsd meg a képernyőt a videó elindításához.";
+              `${item.id} videója nem játszható le ebben a böngészőben. ` +
+              "A videót H.264 (AVC) és AAC formátumba kell konvertálni.";
+          });
+
+          targetEntity.appendChild(videoPlane);
+          targetsContainer.appendChild(targetEntity);
+
+          const waitForFirstFrame = () =>
+            new Promise((resolve) => {
+              const resolveAfterFrame = () => {
+                if ("requestVideoFrameCallback" in videoEl) {
+                  videoEl.requestVideoFrameCallback(() => resolve());
+                } else {
+                  requestAnimationFrame(() => resolve());
+                }
+              };
+
+              if (videoEl.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+                resolveAfterFrame();
+              } else {
+                videoEl.addEventListener("loadeddata", resolveAfterFrame, {
+                  once: true,
+                });
+              }
+            });
+
+          // Célpont megtalálásakor megjelenítjük és elindítjuk
+          targetEntity.addEventListener("targetFound", async () => {
+            console.log(`Célpont megtalálva: ${item.id}`);
+            status.textContent = `${item.id} felismerve, videó betöltése...`;
+
+            if (activeVideo && activeVideo !== videoEl) {
+              activeVideo.pause();
+              activeVideo.currentTime = 0;
+            }
+
+            activeVideo = videoEl;
+            videoPlane.setAttribute("visible", "false");
+            videoEl.muted = true;
+
+            try {
+              await videoEl.play();
+              await waitForFirstFrame();
+              if (activeVideo !== videoEl) {
+                return;
+              }
+              videoPlane.setAttribute("visible", "true");
+              status.textContent = `${item.id} felismerve, a videó lejátszása elindult.`;
+              if (soundAllowed) {
+                videoEl.muted = false;
+              }
+            } catch (error) {
+              console.error(`Nem sikerült lejátszani a(z) ${item.id} videót.`, error);
+              videoPlane.setAttribute("visible", "false");
+              status.textContent =
+                `${item.id} videója nem indítható el. ` +
+                "Érintsd meg a képernyőt, vagy konvertáld H.264 (AVC) formátumba.";
+            }
+          });
+
+          // Célpont elveszítésekor azonnal elrejtjük és megállítjuk
+          targetEntity.addEventListener("targetLost", () => {
+            console.log(`Célpont elveszítve: ${item.id}`);
+            videoPlane.setAttribute("visible", "false"); // Azonnali eltüntetés
+            videoEl.pause();
+            videoEl.currentTime = 0;
+            if (activeVideo === videoEl) {
+              activeVideo = null;
+            }
+            status.textContent = "Irányítsd vissza a kamerát valamelyik képre.";
           });
         });
-
-        // Célpont elveszítésekor azonnal elrejtjük és megállítjuk
-        targetEntity.addEventListener("targetLost", () => {
-          console.log(`Célpont elveszítve: ${item.id}`);
-          videoPlane.setAttribute("visible", "false"); // Azonnali eltüntetés
-          videoEl.pause();
-          videoEl.currentTime = 0;
-          status.textContent = "Irányítsd vissza a kamerát valamelyik képre.";
-        });
       });
-    });
-  </script>
-</body>
-
+    </script>
+  </body>
 </html>
