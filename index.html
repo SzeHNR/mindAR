@@ -83,10 +83,7 @@
         const cleanName = name.trim();
         return {
           id: cleanName,
-          video:
-            cleanName === "lennohajo2"
-              ? "img/lennohajo2 .mp4"
-              : `img/${cleanName}.mp4`,
+          video: `img/${cleanName}.mp4`,
           width: 1,
           height: 1.78,
         };
@@ -105,11 +102,7 @@
           soundAllowed = true;
           if (activeVideo) {
             activeVideo.muted = false;
-            activeVideo.play().catch((error) => {
-              console.error("Nem sikerült hanggal folytatni a videót.", error);
-              status.textContent =
-                "A videó hangja nem indítható el. Érintsd meg újra a képernyőt.";
-            });
+            activeVideo.play().catch(() => {});
           }
           window.removeEventListener("click", enableAudio);
           window.removeEventListener("touchstart", enableAudio);
@@ -130,11 +123,10 @@
           const videoEl = document.createElement("video");
           videoEl.setAttribute("id", `video-${item.id}`);
           videoEl.setAttribute("src", item.video);
-          videoEl.setAttribute("preload", "auto");
+          videoEl.setAttribute("preload", "metadata");
           videoEl.setAttribute("crossorigin", "anonymous");
           videoEl.setAttribute("webkit-playsinline", "");
           videoEl.setAttribute("playsinline", "");
-          videoEl.playsInline = true;
           videoEl.muted = true;
           videoEl.loop = true;
 
@@ -162,23 +154,13 @@
             }
           });
 
-          videoEl.addEventListener("error", () => {
-            videoPlane.setAttribute("visible", "false");
-            if (activeVideo === videoEl) {
-              activeVideo = null;
-            }
-            status.textContent =
-              `${item.id} videója nem játszható le ebben a böngészőben. ` +
-              "A videót H.264 (AVC) és AAC formátumba kell konvertálni.";
-          });
-
           targetEntity.appendChild(videoPlane);
           targetsContainer.appendChild(targetEntity);
 
           // Célpont megtalálásakor megjelenítjük és elindítjuk
-          targetEntity.addEventListener("targetFound", async () => {
+          targetEntity.addEventListener("targetFound", () => {
             console.log(`Célpont megtalálva: ${item.id}`);
-            status.textContent = `${item.id} felismerve, videó betöltése...`;
+            status.textContent = `${item.id} felismerve, a videó lejátszása elindult.`;
 
             if (activeVideo && activeVideo !== videoEl) {
               activeVideo.pause();
@@ -186,26 +168,16 @@
             }
 
             activeVideo = videoEl;
-            videoPlane.setAttribute("visible", "false");
-            videoEl.muted = true;
+            videoPlane.setAttribute("visible", "true"); // Megjelenítés
 
-            try {
-              await videoEl.play();
-              if (activeVideo !== videoEl) {
-                return;
-              }
-              videoPlane.setAttribute("visible", "true");
-              status.textContent = `${item.id} felismerve, a videó lejátszása elindult.`;
-              if (soundAllowed) {
-                videoEl.muted = false;
-              }
-            } catch (error) {
-              console.error(`Nem sikerült lejátszani a(z) ${item.id} videót.`, error);
-              videoPlane.setAttribute("visible", "false");
-              status.textContent =
-                `${item.id} videója nem indítható el. ` +
-                "Érintsd meg a képernyőt, vagy konvertáld H.264 (AVC) formátumba.";
+            if (soundAllowed) {
+              videoEl.muted = false;
             }
+
+            videoEl.play().catch(() => {
+              status.textContent =
+                "Érintsd meg a képernyőt a videó elindításához.";
+            });
           });
 
           // Célpont elveszítésekor azonnal elrejtjük és megállítjuk
@@ -214,9 +186,6 @@
             videoPlane.setAttribute("visible", "false"); // Azonnali eltüntetés
             videoEl.pause();
             videoEl.currentTime = 0;
-            if (activeVideo === videoEl) {
-              activeVideo = null;
-            }
             status.textContent = "Irányítsd vissza a kamerát valamelyik képre.";
           });
         });
