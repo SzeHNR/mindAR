@@ -40,7 +40,7 @@
       id="ar-scene"
       mindar-image="imageTargetSrc: img/target.mind; autoStart: true; uiLoading: no; uiScanning: no; filterMinCF: 0.0001; filterBeta: 0.001;"
       color-space="sRGB"
-      renderer="colorManagement: true, physicallyCorrectLights"
+      renderer="colorManagement: true; antialias: false; precision: mediump;"
       vr-mode-ui="enabled: false"
       device-orientation-permission-ui="enabled: false"
     >
@@ -50,7 +50,6 @@
     </a-scene>
 
     <script>
-      // A tömb pontosan követi a fájlrendszerek és a MindAR compiler kis/nagybetűt nem megkülönböztető ábécésorrendjét.
       const targetNames = [
         "autismo",
         "bluetornado",
@@ -90,8 +89,6 @@
         };
       });
 
-      // A MindAR stabilabb működéséhez érdemes közvetlenül a DOM betöltődés után,
-      // de a scene indulása előtt generálni az elemeket, vagy hagyhatjuk így is, ha eddig ez működött.
       document.addEventListener("DOMContentLoaded", function () {
         const assetsContainer = document.querySelector("#assets-container");
         const targetsContainer = document.querySelector("#targets-container");
@@ -101,8 +98,6 @@
         let activeVideo = null;
         let soundAllowed = false;
 
-        // Opcionális: Ha szeretnél hangot is (az előző kérésed alapján), 
-        // az első érintésre engedélyezzük, de ha maradsz a némánál, az is rendben van.
         const enableAudio = () => {
           soundAllowed = true;
           if (activeVideo) {
@@ -125,7 +120,6 @@
         });
 
         arConfig.forEach((item, index) => {
-          // 1. Videó elem létrehozása (preload="metadata" a mobil túlterhelés elkerülésére)
           const videoEl = document.createElement("video");
           videoEl.setAttribute("id", `video-${item.id}`);
           videoEl.setAttribute("src", item.video);
@@ -138,22 +132,21 @@
 
           assetsContainer.appendChild(videoEl);
 
-          // 2. AR Célpont létrehozása
           const targetEntity = document.createElement("a-entity");
           targetEntity.setAttribute(
             "mindar-image-target",
             `targetIndex: ${index}`,
           );
 
-          // 3. Videó sík létrehozása
+          // Videó sík létrehozása (alapból rejtve: visible="false")
           const videoPlane = document.createElement("a-video");
           videoPlane.setAttribute("src", `#video-${item.id}`);
           videoPlane.setAttribute("position", "0 0 0");
           videoPlane.setAttribute("width", item.width);
           videoPlane.setAttribute("height", item.height);
           videoPlane.setAttribute("rotation", "0 0 0");
+          videoPlane.setAttribute("visible", "false"); 
 
-          // Automatikus méretezés, ha megérkeznek a metaadatok
           videoEl.addEventListener("loadedmetadata", () => {
             if (videoEl.videoWidth && videoEl.videoHeight) {
               const calculatedRatio = videoEl.videoHeight / videoEl.videoWidth;
@@ -164,7 +157,7 @@
           targetEntity.appendChild(videoPlane);
           targetsContainer.appendChild(targetEntity);
 
-          // 4. Eseménykezelők a lejátszáshoz
+          // Célpont megtalálásakor megjelenítjük és elindítjuk
           targetEntity.addEventListener("targetFound", () => {
             console.log(`Célpont megtalálva: ${item.id}`);
             status.textContent = `${item.id} felismerve, a videó lejátszása elindult.`;
@@ -175,6 +168,7 @@
             }
 
             activeVideo = videoEl;
+            videoPlane.setAttribute("visible", "true"); // Megjelenítés
 
             if (soundAllowed) {
               videoEl.muted = false;
@@ -186,9 +180,12 @@
             });
           });
 
+          // Célpont elveszítésekor azonnal elrejtjük és megállítjuk
           targetEntity.addEventListener("targetLost", () => {
             console.log(`Célpont elveszítve: ${item.id}`);
+            videoPlane.setAttribute("visible", "false"); // Azonnali eltüntetés
             videoEl.pause();
+            videoEl.currentTime = 0;
             status.textContent = "Irányítsd vissza a kamerát valamelyik képre.";
           });
         });
