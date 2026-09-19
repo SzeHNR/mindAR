@@ -123,10 +123,11 @@
           const videoEl = document.createElement("video");
           videoEl.setAttribute("id", `video-${item.id}`);
           videoEl.setAttribute("src", item.video);
-          videoEl.setAttribute("preload", "metadata");
+          videoEl.setAttribute("preload", "auto");
           videoEl.setAttribute("crossorigin", "anonymous");
           videoEl.setAttribute("webkit-playsinline", "");
           videoEl.setAttribute("playsinline", "");
+          videoEl.playInline = true;
           videoEl.muted = true;
           videoEl.loop = true;
 
@@ -160,7 +161,7 @@
           // Célpont megtalálásakor megjelenítjük és elindítjuk
           targetEntity.addEventListener("targetFound", () => {
             console.log(`Célpont megtalálva: ${item.id}`);
-            status.textContent = `${item.id} felismerve, a videó lejátszása elindult.`;
+            status.textContent = `${item.id} felismerve, videó betöltése...`;
 
             if (activeVideo && activeVideo !== videoEl) {
               activeVideo.pause();
